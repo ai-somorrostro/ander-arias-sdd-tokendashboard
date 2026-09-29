@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token Dashboard</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main>
+    <h1>Token Dashboard</h1>
+    <p class="subtitle">Cost, speed, modality, and usage for evaluated language models. Data: <code>mock-data.json</code>.</p>
+    <p id="status" role="status">Loading model data…</p>
+    <p id="error" role="alert" hidden></p>
+    <div class="table-wrapper">
+      <table id="models-table">
+        <thead>
+          <tr>
+            <th rowspan="2" scope="col">Model</th>
+            <th colspan="2" scope="colgroup">Usage cost ($/M)</th>
+            <th rowspan="2" scope="col">TTFT (ms)</th>
+            <th rowspan="2" scope="col">Content</th>
+            <th colspan="2" scope="colgroup">Usage (tokens)</th>
+          </tr>
+          <tr>
+            <th scope="col">Cost In</th>
+            <th scope="col">Cost Out</th>
+            <th scope="col">Daily usage</th>
+            <th scope="col">Weekly usage</th>
+          </tr>
+        </thead>
+        <tbody id="models-body">
+        </tbody>
+      </table>
+    </div>
+    <p class="hint">Serve over HTTP, e.g. <code>python3 -m http.server</code>, then open <code>index.html</code>.</p>
+  </main>
+  <script src="./app.js" defer></script>
+</body>
+</html>
