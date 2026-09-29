@@ -1,8 +1,13 @@
 :root {
   color-scheme: light;
-  --border: #c9c9c9;
-  --header-bg: #f2f2f2;
-  --group-bg: #e8e8e8;
+  --border: #c9d4e2;
+  --header-bg: #23405e;
+  --header-text: #ffffff;
+  --group-bg: #2f5378;
+  --page-bg: #edf1f6;
+  --card-bg: #ffffff;
+  --row-alt: #f4f8fc;
+  --row-hover: #e5eefa;
 }
 
 * {
@@ -13,23 +18,55 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   color: #1a1a1a;
-  background: #fff;
+  background: var(--page-bg);
 }
 
 main {
   max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
+  margin: 24px auto;
+  padding: 24px 20px 40px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(35, 64, 94, 0.08);
 }
 
 h1 {
   margin: 0 0 4px;
   font-size: 28px;
+  text-align: center;
 }
 
-.subtitle,
-.hint {
+.subtitle {
   color: #555;
+  text-align: center;
+}
+
+#status {
+  text-align: center;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 12px 0 16px;
+  justify-content: center;
+}
+
+.filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filters input,
+.filters select {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #1a1a1a;
 }
 
 .table-wrapper {
@@ -39,7 +76,7 @@ h1 {
 
 table {
   width: 100%;
-  min-width: 860px;
+  min-width: 960px;
   border-collapse: collapse;
 }
 
@@ -47,22 +84,32 @@ th,
 td {
   padding: 8px 12px;
   border: 1px solid var(--border);
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
 }
 
 thead th {
   background: var(--header-bg);
+  color: var(--header-text);
 }
 
 thead tr:first-child th[colspan] {
   background: var(--group-bg);
+  color: var(--header-text);
   text-align: center;
+}
+
+tbody tr:nth-child(even) {
+  background: var(--row-alt);
+}
+
+tbody tr:hover {
+  background: var(--row-hover);
 }
 
 td.numeric,
 th.numeric {
-  text-align: right;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
@@ -71,4 +118,52 @@ th.numeric {
   background: #fdecec;
   border: 1px solid #e0a0a0;
   padding: 8px 12px;
+}
+
+.sort-btn {
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.sort-btn:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+}
+
+th[data-sort-key="costIn"],
+th[data-sort-key="costOut"],
+th[data-sort-key="ttft"],
+th[data-sort-key="daily"],
+th[data-sort-key="weekly"] {
+  text-align: center;
+}
+
+th[data-sort-key="costIn"] .sort-btn,
+th[data-sort-key="costOut"] .sort-btn,
+th[data-sort-key="ttft"] .sort-btn,
+th[data-sort-key="daily"] .sort-btn,
+th[data-sort-key="weekly"] .sort-btn {
+  width: 100%;
+  text-align: center;
+}
+
+.arrow {
+  display: inline-block;
+  width: 1em;
+  margin-left: 4px;
+  text-align: center;
+}
+
+#empty {
+  color: #555;
+  padding: 8px 12px;
+  text-align: center;
 }
