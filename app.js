@@ -32,6 +32,8 @@ function cell(text, numeric, title) {
 
 function buildRow(model) {
   var tr = document.createElement("tr");
+  tr.tabIndex = 0;
+  tr.setAttribute("data-name", String(model.name));
   var daily = Number(model.inputTokensDay) + Number(model.outputTokensDay);
   var weekly = Number(model.inputTokensWeek) + Number(model.outputTokensWeek);
 
@@ -52,6 +54,9 @@ var sortDir = "asc";
 var nameQuery = "";
 var modalityFilter = "All";
 var usagePeriod = "daily";
+var selectedName = null;
+var panelOpen = false;
+var lastFocusedRow = null;
 
 var SVG_NS = "http://www.w3.org/2000/svg";
 var CHART_W = 960;
@@ -128,6 +133,595 @@ function barWidth(value, max, fullWidth) {
     return 2;
   }
   return w;
+}
+
+function formatSpend(amount) {
+  return "$" + Number(amount).toFixed(2);
+}
+
+function spendDayOf(model) {
+  return (
+    Number(model.inputTokensDay) * Number(model.inputPricePerToken) +
+    Number(model.outputTokensDay) * Number(model.outputPricePerToken)
+  );
+}
+
+function spendWeekOf(model) {
+  return (
+    Number(model.inputTokensWeek) * Number(model.inputPricePerToken) +
+    Number(model.outputTokensWeek) * Number(model.outputPricePerToken)
+  );
+}
+
+function findModelByName(name) {
+  for (var i = 0; i < allModels.length; i++) {
+    if (String(allModels[i].name) === String(name)) {
+      return allModels[i];
+    }
+  }
+  return null;
+}
+
+function isPanelOpen() {
+  var panel = document.getElementById("sidepanel");
+  return !!(panel && !panel.hidden);
+}
+
+function setPanelVisibility(open) {
+  var panel = document.getElementById("sidepanel");
+  var backdrop = document.getElementById("panel-backdrop");
+  if (!panel) {
+    return;
+  }
+  panelOpen = open;
+  panel.hidden = !open;
+  if (backdrop) {
+    backdrop.hidden = !open;
+  }
+  if (open) {
+    document.body.classList.add("panel-open");
+  } else {
+    document.body.classList.remove("panel-open");
+  }
+}
+
+function openPanel(name, focusPanel) {
+  var model = findModelByName(name);
+  if (!model) {
+    return;
+  }
+  var active = document.activeElement;
+  if (
+    active &&
+    active.tagName === "TR" &&
+    active.getAttribute("data-name") === String(name)
+  ) {
+    lastFocusedRow = active;
+  } else {
+    var row = document.querySelector(
+      'tbody tr[data-name="' + String(name).replace(/"/g, "") + '"]'
+    );
+    if (row) {
+      lastFocusedRow = row;
+    }
+  }
+  selectedName = String(model.name);
+  setPanelVisibility(true);
+  renderPanel(getVisibleModels());
+  if (focusPanel !== false) {
+    var title = document.getElementById("panel-title");
+    var closeBtn = document.getElementById("panel-close");
+    if (closeBtn) {
+      closeBtn.focus();
+    } else if (title) {
+      title.focus();
+    }
+  }
+}
+
+function closePanel(returnFocus) {
+  if (!isPanelOpen() && selectedName === null) {
+    return;
+  }
+  selectedName = null;
+  panelOpen = false;
+  setPanelVisibility(false);
+  var notice = document.getElementById("panel-notice");
+  if (notice) {
+    notice.hidden = true;
+  }
+  var rows = document.querySelectorAll("tbody tr.selected");
+  Array.prototype.forEach.call(rows, function (tr) {
+    tr.classList.remove("selected");
+    tr.removeAttribute("aria-selected");
+  });
+  if (returnFocus !== false && lastFocusedRow && lastFocusedRow.isConnected) {
+    lastFocusedRow.focus();
+  }
+  lastFocusedRow = null;
+}
+
+function panelMetricRow(dl, label, value, title, dim) {
+  var dt = document.createElement("dt");
+  dt.textContent = label;
+  var dd = document.createElement("dd");
+  dd.textContent = value;
+  if (title) {
+    dd.title = title;
+  }
+  if (dim) {
+    dd.className = "dim";
+  }
+  dl.appendChild(dt);
+  dl.appendChild(dd);
+}
+
+function panelMetricsCard(metricsEl, title, build) {
+  var section = document.createElement("section");
+  section.className = "panel-card";
+  var h = document.createElement("h3");
+  h.textContent = title;
+  section.appendChild(h);
+  var dl = document.createElement("dl");
+  build(dl);
+  section.appendChild(dl);
+  metricsEl.appendChild(section);
+  return dl;
+}
+
+function panelBarSvg(opts) {
+  var W = 344;
+  var rowH = 40;
+  var barX = 0;
+  var valueW = 118;
+  var barW = W - valueW - 8;
+  var rows = opts.rows;
+  var max = opts.max > 0 ? opts.max : 1;
+  var H = rows.length * rowH + 4;
+  var svg = svgEl("svg", {
+    viewBox: "0 0 " + W + " " + H,
+    role: "img",
+    "aria-label": opts.label
+  });
+  svg.appendChild(svgEl("title", {}, opts.titleText));
+  rows.forEach(function (row, i) {
+    var y = 4 + i * rowH;
+    var g = svgEl("g", {});
+    g.appendChild(
+      svgEl("title", {}, row.label + ": " + row.valueText)
+    );
+    g.appendChild(
+      svgEl(
+        "text",
+        { x: 0, y: y + 11, class: "chart-label" },
+        row.label
+      )
+    );
+    var w = barWidth(row.value, max, barW);
+    g.appendChild(
+      svgEl("rect", {
+        x: barX,
+        y: y + 16,
+        width: Math.max(w, row.value > 0 ? 2 : 0),
+        height: 13,
+        rx: 2,
+        class: row.cls
+      })
+    );
+    g.appendChild(
+      svgEl(
+        "text",
+        { x: barX + barW + 8, y: y + 27, class: "chart-value" },
+        row.valueText
+      )
+    );
+    svg.appendChild(g);
+  });
+  return svg;
+}
+
+function panelTtftSvg(model, visible) {
+  var W = 344;
+  var H = 84;
+  var pad = 2;
+  var trackY = 30;
+  var trackH = 12;
+  var ttfts = visible
+    .map(function (m) {
+      return Number(m.ttft_ms);
+    })
+    .sort(function (a, b) {
+      return a - b;
+    });
+  var slowest = ttfts.length ? ttfts[ttfts.length - 1] : Number(model.ttft_ms);
+  var fastest = ttfts.length ? ttfts[0] : Number(model.ttft_ms);
+  var median;
+  if (!ttfts.length) {
+    median = Number(model.ttft_ms);
+  } else if (ttfts.length % 2 === 1) {
+    median = ttfts[(ttfts.length - 1) / 2];
+  } else {
+    median = (ttfts[ttfts.length / 2 - 1] + ttfts[ttfts.length / 2]) / 2;
+  }
+  var max = slowest > 0 ? slowest : 1;
+  function xPos(v) {
+    return pad + (Number(v) / max) * (W - pad * 2);
+  }
+  var svg = svgEl("svg", {
+    viewBox: "0 0 " + W + " " + H,
+    role: "img",
+    "aria-label": "TTFT compared to visible models"
+  });
+  var summary =
+    String(model.name) +
+    " TTFT " +
+    formatTtft(model.ttft_ms) +
+    "; fastest " +
+    formatTtft(fastest) +
+    ", median " +
+    formatTtft(median) +
+    ", slowest " +
+    formatTtft(slowest);
+  svg.appendChild(svgEl("title", {}, summary));
+  svg.appendChild(
+    svgEl("rect", {
+      x: pad,
+      y: trackY,
+      width: W - pad * 2,
+      height: trackH,
+      fill: "#e5eefa",
+      stroke: "#c9d4e2"
+    })
+  );
+  var thisW = xPos(model.ttft_ms) - pad;
+  svg.appendChild(
+    svgEl("rect", {
+      x: pad,
+      y: trackY,
+      width: Math.max(thisW, 2),
+      height: trackH,
+      class: "bar-in"
+    })
+  );
+  [
+    { v: fastest, label: "fastest" },
+    { v: median, label: "median" },
+    { v: slowest, label: "slowest" }
+  ].forEach(function (m) {
+    var x = xPos(m.v);
+    svg.appendChild(
+      svgEl("line", {
+        x1: x,
+        y1: trackY - 6,
+        x2: x,
+        y2: trackY + trackH + 6,
+        class: "ttft-marker"
+      })
+    );
+  });
+  svg.appendChild(
+    svgEl(
+      "text",
+      { x: pad, y: 14, class: "chart-label" },
+      "This model " + formatTtft(model.ttft_ms)
+    )
+  );
+  svg.appendChild(
+    svgEl(
+      "text",
+      { x: pad, y: trackY + trackH + 22, class: "chart-value" },
+      "Fastest " + formatTtft(fastest) + "  ·  Median " + formatTtft(median)
+    )
+  );
+  svg.appendChild(
+    svgEl(
+      "text",
+      { x: pad, y: trackY + trackH + 38, class: "chart-value" },
+      "Slowest " + formatTtft(slowest)
+    )
+  );
+  return svg;
+}
+
+function panelSection(graphsEl, heading, explainer) {
+  var card = document.createElement("section");
+  card.className = "panel-graph-card";
+  var h = document.createElement("h3");
+  h.textContent = heading;
+  card.appendChild(h);
+  if (explainer) {
+    var p = document.createElement("p");
+    p.className = "formula";
+    p.textContent = explainer;
+    card.appendChild(p);
+  }
+  graphsEl.appendChild(card);
+  return card;
+}
+
+function renderPanel(visible) {
+  var panel = document.getElementById("sidepanel");
+  var titleEl = document.getElementById("panel-title");
+  var noticeEl = document.getElementById("panel-notice");
+  var metricsEl = document.getElementById("panel-metrics");
+  var graphsEl = document.getElementById("panel-graphs");
+  if (!panel || !titleEl || !metricsEl || !graphsEl) {
+    return;
+  }
+  if (selectedName === null || !isPanelOpen()) {
+    return;
+  }
+  var model = findModelByName(selectedName);
+  if (!model) {
+    return;
+  }
+  while (metricsEl.firstChild) {
+    metricsEl.removeChild(metricsEl.firstChild);
+  }
+  while (graphsEl.firstChild) {
+    graphsEl.removeChild(graphsEl.firstChild);
+  }
+  titleEl.textContent = String(model.name);
+  titleEl.title = String(model.name);
+  panel.setAttribute("aria-label", String(model.name));
+
+  var daily = dailyOf(model);
+  var weekly = weeklyOf(model);
+  var dailyAvg = weekly / 7;
+  var delta = daily - dailyAvg;
+  var deltaPct = dailyAvg > 0 ? (delta / dailyAvg) * 100 : 0;
+  var deltaText =
+    (delta >= 0 ? "+" : "") +
+    formatTokens(Math.abs(delta) < 0.5 ? 0 : delta) +
+    " (" +
+    (deltaPct >= 0 ? "+" : "") +
+    deltaPct.toFixed(1) +
+    "% vs avg)";
+  var inDay = Number(model.inputTokensDay);
+  var outDay = Number(model.outputTokensDay);
+  var inWeek = Number(model.inputTokensWeek);
+  var outWeek = Number(model.outputTokensWeek);
+  var inShareDay = daily > 0 ? (inDay / daily) * 100 : 0;
+  var outShareDay = daily > 0 ? (outDay / daily) * 100 : 0;
+  var inShareWeek = weekly > 0 ? (inWeek / weekly) * 100 : 0;
+  var outShareWeek = weekly > 0 ? (outWeek / weekly) * 100 : 0;
+
+  var visibleDaily = 0;
+  var visibleWeekly = 0;
+  visible.forEach(function (m) {
+    visibleDaily += dailyOf(m);
+    visibleWeekly += weeklyOf(m);
+  });
+  var inVisible = visible.some(function (m) {
+    return String(m.name) === String(model.name);
+  });
+  var shareDay = visibleDaily > 0 ? (daily / visibleDaily) * 100 : 0;
+  var shareWeek = visibleWeekly > 0 ? (weekly / visibleWeekly) * 100 : 0;
+
+  var spendDay = spendDayOf(model);
+  var spendWeek = spendWeekOf(model);
+  var ratio =
+    Number(model.inputPricePerToken) > 0
+      ? Number(model.outputPricePerToken) / Number(model.inputPricePerToken)
+      : 0;
+
+  if (noticeEl) {
+    if (!inVisible) {
+      noticeEl.hidden = false;
+      noticeEl.textContent =
+        "This model is outside the current filters. Own metrics are shown; shares and TTFT context are unavailable.";
+    } else {
+      noticeEl.hidden = true;
+      noticeEl.textContent = "";
+    }
+  }
+
+  var badges = document.createElement("div");
+  badges.className = "panel-badges";
+  [String(model.inputModality), String(model.outputModality), formatTtft(model.ttft_ms)].forEach(
+    function (label, i) {
+      var b = document.createElement("span");
+      b.className = "badge";
+      b.textContent = i < 2 ? (i === 0 ? "In: " + label : "Out: " + label) : label;
+      b.title = i === 0 ? "inputModality" : i === 1 ? "outputModality" : "ttft_ms";
+      badges.appendChild(b);
+    }
+  );
+  metricsEl.appendChild(badges);
+
+  panelMetricsCard(metricsEl, "Cost", function (dl) {
+    panelMetricRow(dl, "Cost In", formatCostPerM(model.inputPricePerToken), "inputPricePerToken * 1,000,000");
+    panelMetricRow(dl, "Cost Out", formatCostPerM(model.outputPricePerToken), "outputPricePerToken * 1,000,000");
+    panelMetricRow(dl, "Out / In ratio", ratio.toFixed(2) + "x", "outputPrice / inputPrice");
+  });
+
+  panelMetricsCard(metricsEl, "Volume", function (dl) {
+    panelMetricRow(dl, "Daily total", formatTokens(daily), String(daily));
+    panelMetricRow(dl, "Weekly total", formatTokens(weekly), String(weekly));
+    panelMetricRow(dl, "Daily avg (week / 7)", formatTokens(dailyAvg), String(dailyAvg));
+    panelMetricRow(dl, "Day vs avg", deltaText, String(delta));
+    panelMetricRow(dl, "Day input share", inShareDay.toFixed(1) + "%", String(inDay), true);
+    panelMetricRow(dl, "Day output share", outShareDay.toFixed(1) + "%", String(outDay), true);
+    panelMetricRow(dl, "Week input share", inShareWeek.toFixed(1) + "%", String(inWeek), true);
+    panelMetricRow(dl, "Week output share", outShareWeek.toFixed(1) + "%", String(outWeek), true);
+  });
+
+  panelMetricsCard(metricsEl, "Share of visible", function (dl) {
+    if (inVisible) {
+      panelMetricRow(dl, "Daily share", shareDay.toFixed(1) + "%", String(daily) + " of " + String(visibleDaily));
+      panelMetricRow(dl, "Weekly share", shareWeek.toFixed(1) + "%", String(weekly) + " of " + String(visibleWeekly));
+    } else {
+      panelMetricRow(dl, "Daily share", "—", "unavailable: outside filters");
+      panelMetricRow(dl, "Weekly share", "—", "unavailable: outside filters");
+    }
+  });
+
+  panelMetricsCard(metricsEl, "Estimated spend", function (dl) {
+    panelMetricRow(dl, "Per day", "est. " + formatSpend(spendDay), "inputTokensDay*inputPricePerToken + outputTokensDay*outputPricePerToken");
+    panelMetricRow(dl, "Per week", "est. " + formatSpend(spendWeek), "inputTokensWeek*inputPricePerToken + outputTokensWeek*outputPricePerToken");
+    var formula = document.createElement("p");
+    formula.className = "formula";
+    formula.textContent = "Estimate: inputTokens × inputPrice + outputTokens × outputPrice, per period.";
+    dl.appendChild(formula);
+  });
+
+  var splitCard = panelSection(graphsEl, "Input vs output split");
+  splitCard.appendChild(
+    panelBarSvg({
+      label: "Daily input versus output tokens",
+      titleText:
+        String(model.name) +
+        " daily split: " +
+        String(inDay) +
+        " input, " +
+        String(outDay) +
+        " output",
+      max: daily > 0 ? daily : 1,
+      rows: [
+        {
+          label: "Day in",
+          value: inDay,
+          valueText: formatTokens(inDay) + " (" + inShareDay.toFixed(1) + "%)",
+          cls: "bar-in"
+        },
+        {
+          label: "Day out",
+          value: outDay,
+          valueText: formatTokens(outDay) + " (" + outShareDay.toFixed(1) + "%)",
+          cls: "bar-out"
+        }
+      ]
+    })
+  );
+  splitCard.appendChild(
+    panelBarSvg({
+      label: "Weekly input versus output tokens",
+      titleText:
+        String(model.name) +
+        " weekly split: " +
+        String(inWeek) +
+        " input, " +
+        String(outWeek) +
+        " output",
+      max: weekly > 0 ? weekly : 1,
+      rows: [
+        {
+          label: "Week in",
+          value: inWeek,
+          valueText: formatTokens(inWeek) + " (" + inShareWeek.toFixed(1) + "%)",
+          cls: "bar-in"
+        },
+        {
+          label: "Week out",
+          value: outWeek,
+          valueText: formatTokens(outWeek) + " (" + outShareWeek.toFixed(1) + "%)",
+          cls: "bar-out"
+        }
+      ]
+    })
+  );
+
+  var avgCard = panelSection(graphsEl, "Daily vs weekly average");
+  avgCard.appendChild(
+    panelBarSvg({
+      label: "Daily total versus daily average from weekly total",
+      titleText:
+        "Daily " +
+        String(daily) +
+        " vs avg " +
+        String(dailyAvg) +
+        " (weekly " +
+        String(weekly) +
+        " / 7)",
+      max: Math.max(daily, dailyAvg, 1),
+      rows: [
+        {
+          label: "Today",
+          value: daily,
+          valueText: formatTokens(daily),
+          cls: "bar-share"
+        },
+        {
+          label: "Avg (w/7)",
+          value: dailyAvg,
+          valueText: formatTokens(dailyAvg),
+          cls: "bar-avg"
+        }
+      ]
+    })
+  );
+
+  if (inVisible && visible.length > 0) {
+    var ttftCard = panelSection(graphsEl, "TTFT vs visible models");
+    ttftCard.appendChild(panelTtftSvg(model, visible));
+    var shareCard = panelSection(graphsEl, "Share of visible total");
+    shareCard.appendChild(
+      panelBarSvg({
+        label: "Share of visible daily and weekly totals",
+        titleText:
+          "Day share " +
+          shareDay.toFixed(1) +
+          "% of " +
+          String(visibleDaily) +
+          "; week share " +
+          shareWeek.toFixed(1) +
+          "% of " +
+          String(visibleWeekly),
+        max: 100,
+        rows: [
+          {
+            label: "Day share",
+            value: shareDay,
+            valueText: shareDay.toFixed(1) + "% (" + formatTokens(daily) + ")",
+            cls: "bar-share"
+          },
+          {
+            label: "Week share",
+            value: shareWeek,
+            valueText: shareWeek.toFixed(1) + "% (" + formatTokens(weekly) + ")",
+            cls: "bar-share"
+          }
+        ]
+      })
+    );
+  } else {
+    panelSection(
+      graphsEl,
+      "Share and TTFT context unavailable",
+      "Outside current filters — adjust filters to recompute shares."
+    );
+  }
+
+  var spendCard = panelSection(
+    graphsEl,
+    "Estimated cost exposure",
+    "Estimate: inputTokens × inputPrice + outputTokens × outputPrice."
+  );
+  spendCard.appendChild(
+    panelBarSvg({
+      label: "Estimated spend per day and per week",
+      titleText:
+        "Est. spend day " +
+        formatSpend(spendDay) +
+        ", week " +
+        formatSpend(spendWeek),
+      max: Math.max(spendDay, spendWeek, 0.01),
+      rows: [
+        {
+          label: "Est. $/day",
+          value: spendDay,
+          valueText: "est. " + formatSpend(spendDay),
+          cls: "bar-spend"
+        },
+        {
+          label: "Est. $/wk",
+          value: spendWeek,
+          valueText: "est. " + formatSpend(spendWeek),
+          cls: "bar-spend"
+        }
+      ]
+    })
+  );
 }
 
 function renderCharts(visible) {
@@ -339,7 +933,23 @@ function render() {
   }
   var visible = getVisibleModels();
   visible.forEach(function (model) {
-    tbody.appendChild(buildRow(model));
+    var tr = buildRow(model);
+    if (String(model.name) === selectedName) {
+      tr.classList.add("selected");
+      tr.setAttribute("aria-selected", "true");
+    }
+    tr.addEventListener("click", function () {
+      openPanel(String(model.name), true);
+      render();
+    });
+    tr.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        openPanel(String(model.name), true);
+        render();
+      }
+    });
+    tbody.appendChild(tr);
   });
   statusEl.textContent =
     "Showing " + visible.length + " of " + allModels.length + " models.";
@@ -348,6 +958,9 @@ function render() {
   }
   updateSortIndicators();
   renderCharts(visible);
+  if (isPanelOpen() && selectedName !== null) {
+    renderPanel(visible);
+  }
 }
 
 function handleSort(key) {
@@ -393,6 +1006,23 @@ function wireControls() {
       }
     });
   });
+  var closeBtn = document.getElementById("panel-close");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", function () {
+      closePanel(true);
+    });
+  }
+  var backdrop = document.getElementById("panel-backdrop");
+  if (backdrop) {
+    backdrop.addEventListener("click", function () {
+      closePanel(true);
+    });
+  }
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && isPanelOpen()) {
+      closePanel(true);
+    }
+  });
 }
 
 function showError(message) {
@@ -402,6 +1032,8 @@ function showError(message) {
   var statusEl = document.getElementById("status");
   statusEl.textContent = "Could not load model data.";
   clearChartsOnError();
+  selectedName = null;
+  setPanelVisibility(false);
 }
 
 function load() {

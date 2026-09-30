@@ -66,6 +66,16 @@
     </div>
     <p id="empty" hidden>No models match the current filters.</p>
   </main>
+  <div id="panel-backdrop" hidden></div>
+  <aside id="sidepanel" role="dialog" aria-modal="false" aria-labelledby="panel-title" hidden>
+    <div class="panel-header">
+      <h2 id="panel-title" tabindex="-1">Model details</h2>
+      <button id="panel-close" type="button" aria-label="Close details">×</button>
+    </div>
+    <p id="panel-notice" hidden></p>
+    <div id="panel-metrics"></div>
+    <div id="panel-graphs"></div>
+  </aside>
   <script src="./app.js" defer></script>
 </body>
 </html>
