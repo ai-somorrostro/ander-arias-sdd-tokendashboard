@@ -162,8 +162,141 @@ th[data-sort-key="weekly"] .sort-btn {
   text-align: center;
 }
 
-#empty {
+#empty,
+#charts-empty {
   color: #555;
   padding: 8px 12px;
   text-align: center;
+}
+
+#charts {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px 16px;
+  margin: 0 0 16px;
+  background: #fbfdff;
+}
+
+.charts-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.charts-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+#charts-count {
+  font-size: 14px;
+  font-weight: 400;
+  color: #555;
+}
+
+.usage-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.usage-toggle legend {
+  padding: 0 4px;
+  font-size: 12px;
+  color: #555;
+}
+
+.usage-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.charts-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: #333;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(35, 64, 94, 0.35);
+}
+
+.swatch-in {
+  background: #23405e;
+}
+
+.swatch-out {
+  background: #7aa5d2;
+}
+
+.swatch-share {
+  background: #2ca25f;
+}
+
+.charts-scroll {
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+
+#charts-svg {
+  display: block;
+  width: 100%;
+  min-width: 640px;
+  height: auto;
+  font-size: 12px;
+}
+
+#charts-svg text {
+  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  fill: #1a1a1a;
+}
+
+#charts-svg .chart-name {
+  font-weight: 600;
+}
+
+#charts-svg .chart-value {
+  fill: #333;
+  font-variant-numeric: tabular-nums;
+}
+
+#charts-svg .bar-in {
+  fill: #23405e;
+}
+
+#charts-svg .bar-out {
+  fill: #7aa5d2;
+}
+
+#charts-svg .bar-share {
+  fill: #2ca25f;
+}
+
+#charts-svg .chart-col-header {
+  font-weight: 700;
+  fill: #23405e;
 }

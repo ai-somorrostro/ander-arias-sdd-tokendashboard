@@ -22,6 +22,25 @@
         </select>
       </label>
     </div>
+    <section id="charts" aria-label="Model charts">
+      <div class="charts-header">
+        <h2>Charts <span id="charts-count" role="status" aria-live="polite"></span></h2>
+        <fieldset class="usage-toggle">
+          <legend>Usage period</legend>
+          <label><input type="radio" name="usage-period" value="daily" checked> Daily</label>
+          <label><input type="radio" name="usage-period" value="weekly"> Weekly</label>
+        </fieldset>
+      </div>
+      <div class="charts-legend">
+        <span class="legend-item"><span class="swatch swatch-in" aria-hidden="true"></span> Cost In ($/M)</span>
+        <span class="legend-item"><span class="swatch swatch-out" aria-hidden="true"></span> Cost Out ($/M)</span>
+        <span class="legend-item"><span class="swatch swatch-share" aria-hidden="true"></span> Usage share (% of visible total)</span>
+      </div>
+      <div class="charts-scroll">
+        <svg id="charts-svg" role="img" aria-label="Price and usage charts per model"></svg>
+      </div>
+      <p id="charts-empty" hidden>No models match the current filters.</p>
+    </section>
     <div class="table-wrapper">
       <table id="models-table">
         <thead>
