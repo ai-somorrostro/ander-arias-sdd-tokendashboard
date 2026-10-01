@@ -1,0 +1,6 @@
+.git/
+.opencode/
+openspec/
+*.Zone.Identifier
+*Zone.Identifier*
+.DS_Store
